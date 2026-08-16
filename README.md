@@ -49,7 +49,7 @@ pip install -r requirements.txt
 python scripts/generate_session.py
 ```
 
-Script က phone number, Telegram login code နှင့် two-step verification password ရှိပါက password ကို မေးပါမည်။ ပြီးလျှင် `SESSION_STRING` ကို ထုတ်ပေးပါမည်။ အဲဒီ string ကို **local file ထဲ မသိမ်းဘဲ** Render Environment Variables ထဲသို့ copy လုပ်ပါ။
+Script က phone number, Telegram login code နှင့် two-step verification password ရှိပါက password ကို မေးပါမည်။ ပြီးလျှင် `SESSION_STRING` ကို ထုတ်ပေးပါမည်။ အဲဒီ string ကို **local file ထဲ မသိမ်းဘဲ** Render Environment Variables ထဲသို့ copy လုပ်ပါ။ `SESSION_STRING=` prefix, quotation marks, code block backticks နှင့် line break များ မပါစေရပါ။ လက်ရှိ code သည် အပြင်ဘက် quotation/prefix တချို့ကို ပြန်ဖြုတ်ပေးသော်လည်း placeholder (`replace-me`) ကို reject လုပ်မည်။
 
 > Telegram user account session တစ်ခုကို Telethon `TelegramClient` ဖြင့် အသုံးပြုနိုင်ပြီး `api_id` နှင့် `api_hash` ကို `my.telegram.org` မှ ရယူရသည် [2]။
 
@@ -64,7 +64,7 @@ Script က phone number, Telegram login code နှင့် two-step verificati
 |---|---|
 | `API_ID` | `my.telegram.org` မှ numeric API ID |
 | `API_HASH` | `my.telegram.org` မှ API hash |
-| `SESSION_STRING` | local script က ထုတ်ပေးသော session string |
+| `SESSION_STRING` | local script က ထုတ်ပေးသော အရှည်ကြီးသော Telethon string ကိုသာ ထည့်ပါ။ `replace-me` မထည့်ပါနှင့် |
 | `GROUP_ID` | `-1004378413999` |
 | `CATCH_BOT_ID` | `8506436817` |
 | `TASK_TEXT` | `task လုပ်ပါ` |
@@ -100,7 +100,7 @@ export SPAWN_MARKER='New Waifu Is Here'
 python main.py
 ```
 
-Health check ကို `http://localhost:8080/health` တွင် စစ်နိုင်သည်။ `/start` နှင့် `/stop` command များကို သင့် group ထဲမှ ခွင့်ပြုထားသော account ဖြင့် ပို့ပါ။
+Health check ကို `http://localhost:8080/health` တွင် စစ်နိုင်သည်။ `/start` နှင့် `/stop` command များကို သင့် group ထဲမှ ခွင့်ပြုထားသော account ဖြင့် ပို့ပါ။ Render တွင် `ValueError: Not a valid string` ဖြစ်ပါက `SESSION_STRING` ကို အမှန်တကယ် generate ပြန်လုပ်ပြီး Render Environment Variable ကို အစားထိုးကာ redeploy လုပ်ပါ။
 
 ## References
 

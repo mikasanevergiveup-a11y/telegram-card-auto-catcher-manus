@@ -37,6 +37,21 @@ def required_env(name: str) -> str:
     return value
 
 
+def normalize_session_string(value: str) -> str:
+    """Normalize common dashboard copy/paste wrappers without revealing the secret."""
+    value = value.strip()
+    if value.startswith("SESSION_STRING="):
+        value = value.split("=", 1)[1].strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        value = value[1:-1].strip()
+    value = "".join(value.split())
+    if not value or value.lower() in {"replace-me", "your-session-string", "changeme"}:
+        raise RuntimeError(
+            "SESSION_STRING is empty or still a placeholder. Generate it with scripts/generate_session.py."
+        )
+    return value
+
+
 def parse_id_set(value: str) -> set[int]:
     result: set[int] = set()
     for raw in value.split(","):
@@ -53,7 +68,7 @@ API_ID = env_int("API_ID", 0)
 if API_ID <= 0:
     raise RuntimeError("API_ID must be a positive integer")
 API_HASH = required_env("API_HASH")
-SESSION_STRING = required_env("SESSION_STRING")
+SESSION_STRING = normalize_session_string(required_env("SESSION_STRING"))
 GROUP_ID = env_int("GROUP_ID", -1004378413999)
 CATCH_BOT_ID = env_int("CATCH_BOT_ID", 8506436817)
 TASK_TEXT = os.getenv("TASK_TEXT", "task လုပ်ပါ")
@@ -218,8 +233,16 @@ async def run() -> None:
     task_enabled = asyncio.Event()
     task_enabled.set()  # Preserve the previous auto-start behavior after deployment.
 
+    try:
+        session = StringSession(SESSION_STRING)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(
+            "SESSION_STRING is not a valid Telethon StringSession. "
+            "Run scripts/generate_session.py locally and paste only the printed value into Render."
+        ) from exc
+
     client = TelegramClient(
-        StringSession(SESSION_STRING),
+        session,
         API_ID,
         API_HASH,
         device_model="Render Card Auto Catcher",

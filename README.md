@@ -19,7 +19,7 @@
 1. Telegram user account သည် group ထဲကို `task လုပ်ပါ` ကို ၄ စက္ကန့်တစ်ခါ ပို့သည်။
 2. Group message တစ်ခုတွင် `New Waifu Is Here` စာသားနှင့် media ပါလာပါက spawn post ဟု သတ်မှတ်သည်။
 3. Spawn post ကို `8506436817` သို့ forward လုပ်သည်။
-4. Catcher bot ထံမှ ပြန်လာသော message များထဲတွင် `/guess ...` နှင့် `/sudo ...` ပါလျှင် command နှစ်ခုကို group ထဲသို့ ပြန်ပို့သည်။
+4. Catcher bot ထံမှ ပြန်လာသော message များထဲတွင် `/guess ...` နှင့် `/sudo ...` ပါလျှင် command နှစ်ခုကို group ထဲသို့ ပြန်ပို့သည်။ `Answer: /guess Sakura`, emoji/Markdown ပါသော reply နှင့် command တစ်ကြောင်းချင်း reply များကိုလည်း parser က ဖမ်းနိုင်သည်။
 5. တစ်ခုတည်းသော spawn post ကို process restart မဖြစ်မချင်း ထပ်မပို့ရန် memory ထဲတွင် deduplicate လုပ်ထားသည်။
 6. Group ထဲမှ ခွင့်ပြုထားသော user သည် `/stop` ပို့လျှင် task message loop ကို ရပ်ပြီး `/start` ပို့လျှင် ပြန်စသည်။ Spawn forwarding နှင့် bot result listener က ဆက်လက်အလုပ်လုပ်နေမည်။
 

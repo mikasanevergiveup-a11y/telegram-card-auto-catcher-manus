@@ -77,9 +77,10 @@ SPAWN_MARKER = os.getenv("SPAWN_MARKER", "New Waifu Is Here").casefold()
 BOT_REPLY_TIMEOUT_SECONDS = max(10, env_int("BOT_REPLY_TIMEOUT_SECONDS", 25))
 CONTROL_USER_IDS = parse_id_set(os.getenv("CONTROL_USER_IDS", ""))
 
-# Only exact /guess and /sudo lines are relayed; unrelated bot text is ignored.
+# Match commands anywhere in a bot reply, including after labels such as
+# "Answer:", emoji, bullets, or Markdown formatting.
 COMMAND_RE = re.compile(
-    r"^\s*(/(?:guess|sudo)(?:@[A-Za-z0-9_]+)?\s+[^\r\n`]+?)\s*$",
+    r"(?<![A-Za-z0-9_])(/(?:guess|sudo)(?:@[A-Za-z0-9_]+)?[ \t]+[^\r\n`]+)",
     re.IGNORECASE,
 )
 CONTROL_RE = re.compile(r"^\s*/(start|stop)(?:@[A-Za-z0-9_]+)?\s*$", re.IGNORECASE)
@@ -101,14 +102,13 @@ authorized_control_ids: set[int] = set(CONTROL_USER_IDS)
 
 def extract_commands(text: str) -> list[str]:
     commands: list[str] = []
-    for line in text.splitlines():
-        match = COMMAND_RE.match(line)
-        if not match:
-            continue
-        command = " ".join(match.group(1).split())
-        if command.lower().startswith("/guess") or command.lower().startswith("/sudo"):
-            if command not in commands:
-                commands.append(command)
+    # Telegram replies can contain zero-width spaces and Markdown markers.
+    cleaned = text.replace("\u200b", " ").replace("\u2060", " ")
+    for match in COMMAND_RE.finditer(cleaned):
+        command = " ".join(match.group(1).strip().split())
+        command = command.strip("`*_ ")
+        if command and command.casefold() not in {item.casefold() for item in commands}:
+            commands.append(command)
     return commands
 
 
@@ -167,7 +167,13 @@ async def handle_spawn(client: TelegramClient, message) -> None:
 
 
 async def handle_bot_reply(client: TelegramClient, message) -> None:
-    commands = extract_commands(message.raw_text or "")
+    raw_text = message.raw_text or ""
+    commands = extract_commands(raw_text)
+    logger.info(
+        "Bot reply received from %s; commands_detected=%s",
+        message.sender_id,
+        len(commands),
+    )
     if not commands:
         return
     assert state_lock is not None

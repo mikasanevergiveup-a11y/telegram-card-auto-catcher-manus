@@ -8,6 +8,9 @@ from main import CONTROL_RE, extract_commands, normalize_session_string, SPAWN_M
 
 assert extract_commands("/guess Sakura\n/sudo Sakura") == ["/guess Sakura", "/sudo Sakura"]
 assert extract_commands("hello\nnot a command") == []
+assert extract_commands("Answer: /guess Sakura") == ["/guess Sakura"]
+assert extract_commands("🎯 **/guess Sakura**\n`/sudo Sakura`") == ["/guess Sakura", "/sudo Sakura"]
+assert extract_commands("/guess Sakura\n/sudo Sakura") == ["/guess Sakura", "/sudo Sakura"]
 assert SPAWN_MARKER == "new waifu is here"
 assert normalize_session_string("  'abc123'  ") == "abc123"
 assert normalize_session_string("SESSION_STRING=abc123") == "abc123"

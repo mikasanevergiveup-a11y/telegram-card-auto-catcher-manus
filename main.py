@@ -2,16 +2,16 @@ import asyncio
 import logging
 import os
 import re
-import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Deque, Set
 
-from flask import Flask, jsonify
 from telethon import TelegramClient, events
 from telethon.errors import FloodWaitError, RPCError
 from telethon.sessions import StringSession
+
+from keep_alive import start_keep_alive
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),
@@ -37,6 +37,18 @@ def required_env(name: str) -> str:
     return value
 
 
+def parse_id_set(value: str) -> set[int]:
+    result: set[int] = set()
+    for raw in value.split(","):
+        raw = raw.strip()
+        if raw:
+            try:
+                result.add(int(raw))
+            except ValueError as exc:
+                raise RuntimeError("CONTROL_USER_IDS must be comma-separated numeric Telegram IDs") from exc
+    return result
+
+
 API_ID = env_int("API_ID", 0)
 if API_ID <= 0:
     raise RuntimeError("API_ID must be a positive integer")
@@ -48,13 +60,14 @@ TASK_TEXT = os.getenv("TASK_TEXT", "task လုပ်ပါ")
 TASK_INTERVAL_SECONDS = max(4, env_int("TASK_INTERVAL_SECONDS", 4))
 SPAWN_MARKER = os.getenv("SPAWN_MARKER", "New Waifu Is Here").casefold()
 BOT_REPLY_TIMEOUT_SECONDS = max(10, env_int("BOT_REPLY_TIMEOUT_SECONDS", 25))
+CONTROL_USER_IDS = parse_id_set(os.getenv("CONTROL_USER_IDS", ""))
 
-# Commands are deliberately extracted line-by-line so unrelated bot text is not
-# copied into the group.
+# Only exact /guess and /sudo lines are relayed; unrelated bot text is ignored.
 COMMAND_RE = re.compile(
     r"^\s*(/(?:guess|sudo)(?:@[A-Za-z0-9_]+)?\s+[^\r\n`]+?)\s*$",
     re.IGNORECASE,
 )
+CONTROL_RE = re.compile(r"^\s*/(start|stop)(?:@[A-Za-z0-9_]+)?\s*$", re.IGNORECASE)
 
 
 @dataclass
@@ -66,28 +79,9 @@ class PendingSpawn:
 
 pending_spawns: Deque[PendingSpawn] = deque()
 seen_spawn_ids: Deque[int] = deque(maxlen=500)
-state_lock = asyncio.Lock()
-
-
-# Render requires a bound HTTP port for a Web Service. This endpoint does not
-# control Telegram; it only reports process health.
-health_app = Flask(__name__)
-
-
-@health_app.get("/health")
-def health():
-    return jsonify({
-        "ok": True,
-        "service": "telegram-card-autocatcher",
-        "group_id": GROUP_ID,
-        "task_interval_seconds": TASK_INTERVAL_SECONDS,
-        "pending_spawns": len(pending_spawns),
-    })
-
-
-def run_health_server() -> None:
-    port = env_int("PORT", 8080)
-    health_app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
+state_lock: asyncio.Lock | None = None
+task_enabled: asyncio.Event | None = None
+authorized_control_ids: set[int] = set(CONTROL_USER_IDS)
 
 
 def extract_commands(text: str) -> list[str]:
@@ -104,6 +98,7 @@ def extract_commands(text: str) -> list[str]:
 
 
 async def prune_pending() -> None:
+    assert state_lock is not None
     now = time.monotonic()
     async with state_lock:
         while pending_spawns and now - pending_spawns[0].created_at > BOT_REPLY_TIMEOUT_SECONDS:
@@ -112,7 +107,9 @@ async def prune_pending() -> None:
 
 
 async def task_sender(client: TelegramClient) -> None:
+    assert task_enabled is not None
     while client.is_connected():
+        await task_enabled.wait()
         try:
             await client.send_message(GROUP_ID, TASK_TEXT)
             logger.info("Sent task message to %s", GROUP_ID)
@@ -135,6 +132,7 @@ async def handle_spawn(client: TelegramClient, message) -> None:
     text = message.raw_text or ""
     if SPAWN_MARKER not in text.casefold() or not message.media:
         return
+    assert state_lock is not None
 
     async with state_lock:
         if message.id in seen_spawn_ids:
@@ -157,6 +155,7 @@ async def handle_bot_reply(client: TelegramClient, message) -> None:
     commands = extract_commands(message.raw_text or "")
     if not commands:
         return
+    assert state_lock is not None
 
     await prune_pending()
     async with state_lock:
@@ -164,13 +163,12 @@ async def handle_bot_reply(client: TelegramClient, message) -> None:
             logger.info("Ignoring bot commands because no spawn is pending")
             return
         pending = pending_spawns[0]
-        new_commands = [command for command in commands if command.casefold() not in {
-            item.casefold() for item in pending.sent_commands
-        }]
+        sent_lower = {item.casefold() for item in pending.sent_commands}
+        new_commands = [command for command in commands if command.casefold() not in sent_lower]
         pending.sent_commands.update(new_commands)
-        # Most catcher replies contain both commands. Keep a partial response
-        # pending briefly in case /guess and /sudo arrive as separate messages.
-        if {"/guess", "/sudo"}.issubset({item.split()[0].split("@")[0].casefold() for item in pending.sent_commands}):
+        # Keep a partial response pending when /guess and /sudo arrive separately.
+        command_names = {item.split()[0].split("@")[0].casefold() for item in pending.sent_commands}
+        if {"/guess", "/sudo"}.issubset(command_names):
             pending_spawns.popleft()
 
     for command in new_commands:
@@ -185,13 +183,47 @@ async def handle_bot_reply(client: TelegramClient, message) -> None:
             logger.exception("Unexpected error while relaying command")
 
 
+async def handle_control_command(client: TelegramClient, message) -> bool:
+    global task_enabled
+    match = CONTROL_RE.match(message.raw_text or "")
+    if not match or message.sender_id not in authorized_control_ids:
+        return False
+    assert task_enabled is not None
+
+    command = match.group(1).casefold()
+    if command == "start":
+        task_enabled.set()
+        reply = "Task loop started."
+        logger.info("Task loop started by user %s", message.sender_id)
+    else:
+        task_enabled.clear()
+        reply = "Task loop stopped."
+        logger.info("Task loop stopped by user %s", message.sender_id)
+    try:
+        await client.send_message(GROUP_ID, reply)
+    except FloodWaitError as exc:
+        logger.warning("Flood wait while sending control acknowledgement: %s seconds", exc.seconds)
+    return True
+
+
+async def handle_group_message(client: TelegramClient, event) -> None:
+    if await handle_control_command(client, event.message):
+        return
+    await handle_spawn(client, event.message)
+
+
 async def run() -> None:
+    global state_lock, task_enabled, authorized_control_ids
+    state_lock = asyncio.Lock()
+    task_enabled = asyncio.Event()
+    task_enabled.set()  # Preserve the previous auto-start behavior after deployment.
+
     client = TelegramClient(
         StringSession(SESSION_STRING),
         API_ID,
         API_HASH,
         device_model="Render Card Auto Catcher",
-        app_version="1.0.0",
+        app_version="1.1.0",
         sequential_updates=True,
         flood_sleep_threshold=60,
     )
@@ -204,10 +236,13 @@ async def run() -> None:
         )
 
     me = await client.get_me()
+    if not authorized_control_ids:
+        authorized_control_ids = {me.id}
     logger.info("Logged in as %s (id=%s)", getattr(me, "username", None), me.id)
+    logger.info("Authorized control user IDs: %s", sorted(authorized_control_ids))
 
     client.add_event_handler(
-        lambda event: handle_spawn(client, event.message),
+        lambda event: handle_group_message(client, event),
         events.NewMessage(chats=GROUP_ID),
     )
     client.add_event_handler(
@@ -226,7 +261,7 @@ async def run() -> None:
 
 
 def main() -> None:
-    threading.Thread(target=run_health_server, daemon=True, name="health-server").start()
+    start_keep_alive()
     try:
         asyncio.run(run())
     except KeyboardInterrupt:

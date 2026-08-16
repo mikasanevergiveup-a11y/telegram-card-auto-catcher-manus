@@ -21,6 +21,13 @@
 3. Spawn post ကို `8506436817` သို့ forward လုပ်သည်။
 4. Catcher bot ထံမှ ပြန်လာသော message များထဲတွင် `/guess ...` နှင့် `/sudo ...` ပါလျှင် command နှစ်ခုကို group ထဲသို့ ပြန်ပို့သည်။
 5. တစ်ခုတည်းသော spawn post ကို process restart မဖြစ်မချင်း ထပ်မပို့ရန် memory ထဲတွင် deduplicate လုပ်ထားသည်။
+6. Group ထဲမှ ခွင့်ပြုထားသော user သည် `/stop` ပို့လျှင် task message loop ကို ရပ်ပြီး `/start` ပို့လျှင် ပြန်စသည်။ Spawn forwarding နှင့် bot result listener က ဆက်လက်အလုပ်လုပ်နေမည်။
+
+## `/start` နှင့် `/stop`
+
+Service စတင်ချိန်တွင် task loop သည် အလိုအလျောက် start ဖြစ်သည်။ Group ထဲတွင် `/stop` ပို့လျှင် ၄ စက္ကန့်တစ်ခါ `task လုပ်ပါ` ပို့ခြင်းကိုသာ ရပ်မည်။ `/start` ပို့လျှင် task loop ပြန်စမည်။ Control command ကို မူလ Telegram account ကိုယ်တိုင်က ပို့လျှင် အလိုအလျောက်ခွင့်ပြုထားသည်။ အခြား Telegram user များကို ခွင့်ပြုလိုပါက `CONTROL_USER_IDS` တွင် comma-separated numeric IDs ထည့်ပါ။
+
+`keep_alive.py` သည် ပေးထားသော shared file ကို project အတွက် ပြန်ညှိထားသော version ဖြစ်ပြီး `/`, `/health`, `/healthz` health routes နှင့် အနည်းဆုံး ၆၀ စက္ကန့် interval ရှိသော self-ping loop ပါသည်။ Self-ping သည် liveness aid သာဖြစ်ပြီး Render Free spin-down သို့မဟုတ် restart ကို အာမခံတားဆီးပေးမည် မဟုတ်ပါ။
 
 ## Approach နှစ်မျိုး၏ ကွာခြားချက်
 
@@ -64,6 +71,11 @@ Script က phone number, Telegram login code နှင့် two-step verificati
 | `TASK_INTERVAL_SECONDS` | `4` |
 | `SPAWN_MARKER` | `New Waifu Is Here` |
 | `BOT_REPLY_TIMEOUT_SECONDS` | `25` |
+| `CONTROL_USER_IDS` | Optional; ဥပမာ `123456789,987654321` |
+| `SELF_PING_URL` | Optional; Render public URL + `/healthz` မဟုတ်ဘဲ base URL သာ ထည့်ပါ |
+| `SELF_PING_INTERVAL` | `180` seconds; code က ၆၀ ထက်နည်းလျှင် ၆၀ သို့ညှိမည် |
+| `SELF_PING_START_DELAY` | `10` seconds |
+| `SELF_PING_TIMEOUT` | `10` seconds |
 | `PORT` | Render က အလိုအလျောက်ထည့်ပေးလျှင် မပြောင်းပါနှင့် |
 
 `render.yaml` ပါသဖြင့် Build Command ကို `pip install -r requirements.txt` နှင့် Start Command ကို `python main.py` ထားနိုင်သည်။ Render Free service တွင် service restart ဖြစ်နိုင်သဖြင့် `SESSION_STRING` ကို persistent local file အဖြစ် မထားဘဲ environment variable အဖြစ် အသုံးပြုထားသည်။
@@ -88,7 +100,7 @@ export SPAWN_MARKER='New Waifu Is Here'
 python main.py
 ```
 
-Health check ကို `http://localhost:8080/health` တွင် စစ်နိုင်သည်။
+Health check ကို `http://localhost:8080/health` တွင် စစ်နိုင်သည်။ `/start` နှင့် `/stop` command များကို သင့် group ထဲမှ ခွင့်ပြုထားသော account ဖြင့် ပို့ပါ။
 
 ## References
 

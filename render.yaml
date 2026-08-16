@@ -24,3 +24,13 @@ services:
         value: "New Waifu Is Here"
       - key: BOT_REPLY_TIMEOUT_SECONDS
         value: "25"
+      - key: CONTROL_USER_IDS
+        sync: false
+      - key: SELF_PING_URL
+        sync: false
+      - key: SELF_PING_INTERVAL
+        value: "180"
+      - key: SELF_PING_START_DELAY
+        value: "10"
+      - key: SELF_PING_TIMEOUT
+        value: "10"

@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: telegram-card-autocatcher
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: SESSION_STRING
+        sync: false
+      - key: GROUP_ID
+        value: "-1004378413999"
+      - key: CATCH_BOT_ID
+        value: "8506436817"
+      - key: TASK_TEXT
+        value: "task လုပ်ပါ"
+      - key: TASK_INTERVAL_SECONDS
+        value: "4"
+      - key: SPAWN_MARKER
+        value: "New Waifu Is Here"
+      - key: BOT_REPLY_TIMEOUT_SECONDS
+        value: "25"

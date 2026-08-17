@@ -66,8 +66,9 @@ Script က phone number, Telegram login code နှင့် two-step verificati
 | `API_ID` | `my.telegram.org` မှ numeric API ID |
 | `API_HASH` | `my.telegram.org` မှ API hash |
 | `SESSION_STRING` | local script က ထုတ်ပေးသော အရှည်ကြီးသော Telethon string ကိုသာ ထည့်ပါ။ `replace-me` မထည့်ပါနှင့် |
-| `GROUP_IDS` | ဥပမာ `-1004378413999,-1001111111111,-1002222222222,-1003333333333,-1004444444444`; အနည်းဆုံး ၅ ခုသုံးနိုင် |
-| `GROUP_ID` | Optional fallback; `GROUP_IDS` မရှိမှသာ `-1004378413999` ကိုသုံးမည် |
+| `GROUP_IDS` | Optional comma-separated IDs; ဥပမာ `-1004378413999,-1001111111111,-1002222222222,-1003333333333,-1004444444444` |
+| `GROUP_ID_1` ... `GROUP_ID_5` | Optional; group တစ်ခုချင်းစီကို သီးခြား Render field ထဲထည့်နိုင်သည် |
+| `GROUP_ID` | Optional fallback; `GROUP_IDS` နှင့် `GROUP_ID_1..5` မရှိမှသာ `-1004378413999` ကိုသုံးမည် |
 | `CATCH_BOT_ID` | `8506436817` |
 | `TASK_TEXT` | `task လုပ်ပါ` |
 | `TASK_INTERVAL_SECONDS` | `4` per group; code က ၄ စက္ကန့်အောက်ကို ၄ သို့ညှိမည် |
@@ -80,7 +81,9 @@ Script က phone number, Telegram login code နှင့် two-step verificati
 | `SELF_PING_TIMEOUT` | `10` seconds |
 | `PORT` | Render က အလိုအလျောက်ထည့်ပေးလျှင် မပြောင်းပါနှင့် |
 
-`render.yaml` ပါသဖြင့် Build Command ကို `pip install -r requirements.txt` နှင့် Start Command ကို `python main.py` ထားနိုင်သည်။ Render Free service တွင် service restart ဖြစ်နိုင်သဖြင့် `SESSION_STRING` ကို persistent local file အဖြစ် မထားဘဲ environment variable အဖြစ် အသုံးပြုထားသည်။
+`GROUP_IDS` ထဲမှာ comma ခွဲထည့်နိုင်သလို `GROUP_ID_1` မှ `GROUP_ID_5` အထိ သီးခြား field များလည်း သုံးနိုင်သည်။ Code က နှစ်မျိုးလုံးကို စုစည်းပြီး duplicate ID များကို ဖယ်ရှားမည်။ Account က group ၅ ခုလုံးမှာ member ဖြစ်ပြီး message ပို့/forward ခွင့်ရှိရပါမယ်။ Startup log ထဲမှာ `Configured group count`, `Group ready` နှင့် `Group unavailable` ကိုပြမည်။ သုံးခုသာ run နေလျှင် ကျန် ID များ မမှန်ခြင်း၊ account မဝင်ထားခြင်း သို့မဟုတ် permission မရှိခြင်းကို အဲဒီ log မှာ စစ်နိုင်သည်။
+
+Telegram update handling သည် fixed polling sleep မဟုတ်ဘဲ event-driven ဖြစ်သည်။ ထို့ကြောင့် spawn တွေ့သည်နှင့် artificial delay မထည့်ဘဲ forward လုပ်ပြီး bot result ကိုလည်း concurrent handler ဖြင့် ပြန်ပို့သည်။ Telegram flood-wait သို့မဟုတ် platform rate limit ကိုတော့ ကျော်လွှားရန် မကြိုးစားပါ။ `render.yaml` ပါသဖြင့် Build Command ကို `pip install -r requirements.txt` နှင့် Start Command ကို `python main.py` ထားနိုင်သည်။ Render Free service တွင် service restart ဖြစ်နိုင်သဖြင့် `SESSION_STRING` ကို persistent local file အဖြစ် မထားဘဲ environment variable အဖြစ် အသုံးပြုထားသည်။
 
 ## လုံခြုံရေးနှင့် Telegram ကန့်သတ်ချက်များ
 

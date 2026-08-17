@@ -14,6 +14,7 @@ from main import CONTROL_RE, extract_commands, load_group_ids, normalize_session
 assert extract_commands("/guess Sakura\n/sudo Sakura") == ["/guess Sakura", "/sudo Sakura"]
 assert extract_commands("hello\nnot a command") == []
 assert extract_commands("Answer: /guess Sakura") == ["/guess Sakura"]
+assert extract_commands("👒 New Waifu Is Here, Hurry-Up!\nType /guess Sakura To Add Her Into Your Harem") == ["/guess Sakura To Add Her Into Your Harem"]
 assert extract_commands("🎯 **/guess Sakura**\n`/sudo Sakura`") == ["/guess Sakura", "/sudo Sakura"]
 assert extract_commands("/guess Sakura\n/sudo Sakura") == ["/guess Sakura", "/sudo Sakura"]
 assert SPAWN_MARKER == "new waifu is here"

@@ -195,7 +195,7 @@ async def task_sender(client: TelegramClient) -> None:
 
 async def handle_spawn(client: TelegramClient, message, group_id: int) -> None:
     text = message.raw_text or ""
-    if SPAWN_MARKER not in text.casefold() or not message.media:
+    if SPAWN_MARKER not in text.casefold():
         return
     assert state_lock is not None
 
@@ -265,7 +265,6 @@ async def handle_bot_reply(client: TelegramClient, message) -> None:
     assert state_lock is not None
 
     await prune_pending()
-    target_group: int | None = None
     new_commands: list[str] = []
     async with state_lock:
         pending: PendingSpawn | None = None
@@ -283,17 +282,30 @@ async def handle_bot_reply(client: TelegramClient, message) -> None:
             logger.info("Ignoring bot commands because no spawn is pending")
             return
 
-        target_group = pending.group_id
         sent_lower = {item.casefold() for item in pending.sent_commands}
         new_commands = [command for command in commands if command.casefold() not in sent_lower]
         pending.sent_commands.update(new_commands)
         command_names = {item.split()[0].split("@")[0].casefold() for item in pending.sent_commands}
-        if {"/guess", "/sudo"}.issubset(command_names):
+        # The /guess result completes this spawn for the requested workflow.
+        # If /sudo is included in the same reply, it is broadcast as well.
+        if "/guess" in command_names or {"/guess", "/sudo"}.issubset(command_names):
             pending_spawns.remove(pending)
 
-    if target_group is not None and new_commands:
-        # Send /guess and /sudo concurrently to minimize relay latency.
-        await asyncio.gather(*(relay_command(client, target_group, command) for command in new_commands))
+    if new_commands:
+        # Broadcast every bot command to every configured card group in
+        # parallel. There is no artificial sleep between groups.
+        deliveries = [
+            relay_command(client, group_id, command)
+            for group_id in GROUP_IDS
+            for command in new_commands
+        ]
+        await asyncio.gather(*deliveries)
+        logger.info(
+            "Broadcast commands=%s to group_count=%s groups=%s",
+            len(new_commands),
+            len(GROUP_IDS),
+            GROUP_IDS,
+        )
 
 
 async def handle_control_command(client: TelegramClient, message) -> bool:

@@ -18,15 +18,15 @@
 ## လုပ်ဆောင်ပုံ
 
 1. Telegram user account သည် `GROUP_IDS` ထဲက group တစ်ခုချင်းစီသို့ `task လုပ်ပါ` ကို ၄ စက္ကန့်တစ်ခါ ပို့သည်။
-2. သတ်မှတ်ထားသော group တစ်ခုတွင် `New Waifu Is Here` စာသားနှင့် media ပါလာပါက အဲဒီ group ၏ spawn post ဟု သတ်မှတ်သည်။
+2. Card group တစ်ခုတွင် `👒 New Waifu Is Here, Hurry-Up!` နှင့် `/guess <name>` ပါသော spawn post ပေါ်လာပါက အဲဒီ post ကို spawn ဟု သတ်မှတ်သည်။
 3. Spawn post ကို delay မထည့်ဘဲ `8506436817` သို့ ချက်ချင်း forward လုပ်သည်။ Group များစွာ၏ updates ကို တစ်ပြိုင်နက် လက်ခံနိုင်အောင် concurrent event handling သုံးထားသည်။
-4. Catcher bot ထံမှ ပြန်လာသော message များထဲတွင် `/guess ...` နှင့် `/sudo ...` ပါလျှင် command နှစ်ခုကို group ထဲသို့ ပြန်ပို့သည်။ `Answer: /guess Sakura`, emoji/Markdown ပါသော reply နှင့် command တစ်ကြောင်းချင်း reply များကိုလည်း parser က ဖမ်းနိုင်သည်။
+4. Catcher bot ထံမှ `/guess (charactername)` သို့မဟုတ် `/sudo (character name)` ရလာလျှင် မူရင်း group တစ်ခုတည်းမဟုတ်ဘဲ `GROUP_IDS`/`GROUP_ID_1..5` ထဲက group အားလုံးသို့ တစ်ပြိုင်နက် broadcast လုပ်သည်။ `Answer: /guess Sakura`, emoji/Markdown ပါသော reply နှင့် command တစ်ကြောင်းချင်း reply များကိုလည်း parser က ဖမ်းနိုင်သည်။
 5. တစ်ခုတည်းသော spawn post ကို process restart မဖြစ်မချင်း ထပ်မပို့ရန် memory ထဲတွင် deduplicate လုပ်ထားသည်။
 6. Group ထဲမှ ခွင့်ပြုထားသော user သည် `/stop` ပို့လျှင် task message loop ကို ရပ်ပြီး `/start` ပို့လျှင် ပြန်စသည်။ Spawn forwarding နှင့် bot result listener က ဆက်လက်အလုပ်လုပ်နေမည်။
 
 ## `/start` နှင့် `/stop`
 
-Service စတင်ချိန်တွင် group အားလုံး၏ task loop များသည် အလိုအလျောက် start ဖြစ်သည်။ Group တစ်ခုထဲတွင် `/stop` ပို့လျှင် group အားလုံး၏ task loops ကို ရပ်မည်။ `/start` ပို့လျှင် group အားလုံး ပြန်စမည်။ Control command ကို မူလ Telegram account ကိုယ်တိုင်က ပို့လျှင် အလိုအလျောက်ခွင့်ပြုထားသည်။ အခြား Telegram user များကို ခွင့်ပြုလိုပါက `CONTROL_USER_IDS` တွင် comma-separated numeric IDs ထည့်ပါ။
+Service စတင်ချိန်တွင် card group အားလုံး၏ task loop များသည် အလိုအလျောက် start ဖြစ်သည်။ Group တစ်ခုထဲတွင် `/stop` ပို့လျှင် task loops အားလုံး ရပ်မည်။ `/start` ပို့လျှင် ပြန်စမည်။ Spawn result broadcast ကတော့ bot result ရရှိလျှင် group အားလုံးသို့ ဆက်ပို့မည်။ Control command ကို မူလ Telegram account ကိုယ်တိုင်က ပို့လျှင် အလိုအလျောက်ခွင့်ပြုထားသည်။ အခြား Telegram user များကို ခွင့်ပြုလိုပါက `CONTROL_USER_IDS` တွင် comma-separated numeric IDs ထည့်ပါ။
 
 `keep_alive.py` သည် ပေးထားသော shared file ကို project အတွက် ပြန်ညှိထားသော version ဖြစ်ပြီး `/`, `/health`, `/healthz` health routes နှင့် အနည်းဆုံး ၆၀ စက္ကန့် interval ရှိသော self-ping loop ပါသည်။ Self-ping သည် liveness aid သာဖြစ်ပြီး Render Free spin-down သို့မဟုတ် restart ကို အာမခံတားဆီးပေးမည် မဟုတ်ပါ။
 

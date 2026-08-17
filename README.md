@@ -8,7 +8,7 @@
 
 | Setting | Value |
 |---|---:|
-| Group ID | Render `GROUP_ID` မှာ `-1004378413999` |
+| Group ID | Render `GROUP_ID` မှာ `-1004403495974` |
 | Catcher bot ID | `8506436817` |
 | Task interval | `4` seconds |
 | Task text | `task လုပ်ပါ` |
@@ -65,7 +65,7 @@ Script က phone number, Telegram login code နှင့် two-step verificati
 | `API_ID` | `my.telegram.org` မှ numeric API ID |
 | `API_HASH` | `my.telegram.org` မှ API hash |
 | `SESSION_STRING` | local script က ထုတ်ပေးသော အရှည်ကြီးသော Telethon string ကိုသာ ထည့်ပါ။ `replace-me` မထည့်ပါနှင့် |
-| `GROUP_ID` | `-1004378413999` သို့မဟုတ် သင်အသုံးပြုမည့် single group ID |
+| `GROUP_ID` | `-1004403495974` သို့မဟုတ် သင်အသုံးပြုမည့် single group ID |
 | `CATCH_BOT_ID` | `8506436817` |
 | `CATCH_BOT_USERNAME` | Optional; bot username ရှိပါက `@` မပါဘဲ ထည့်ပါ |
 | `TASK_TEXT` | `task လုပ်ပါ` |
@@ -79,7 +79,8 @@ Script က phone number, Telegram login code နှင့် two-step verificati
 | `SELF_PING_TIMEOUT` | `10` seconds |
 | `PORT` | Render က အလိုအလျောက်ထည့်ပေးလျှင် မပြောင်းပါနှင့် |
 
-Account က single group ထဲမှာ member ဖြစ်ပြီး message ပို့/forward ခွင့်ရှိရပါမယ်။ Startup log ထဲမှာ `Configured single group` နှင့် `Group ready` ကိုပြမည်။ Account banned ဖြစ်သော group ကို code က `disabled` လုပ်ပြီး ထပ်မပို့တော့ပါ။ Telegram update handling သည် event-driven ဖြစ်ပြီး spawn တွေ့သည်နှင့် artificial delay မထည့်ဘဲ forward လုပ်သည်။ `render.yaml` ပါသဖြင့် Build Command ကို `pip install -r requirements.txt` နှင့် Start Command ကို `python main.py` ထားနိုင်သည်။ Render Free service တွင် service restart ဖြစ်နိုင်သဖြင့် `SESSION_STRING` ကို persistent local file အဖြစ် မထားဘဲ environment variable အဖြစ် အသုံးပြုထားသည်။
+Account က `-1004403495974` group ထဲမှာ member ဖြစ်ပြီး message ပို့/forward ခွင့်ရှိရပါမယ်။ အရင် log ထဲမှာ ဒီ ID အတွက် `UserBannedInSupergroupError` ရှိခဲ့သောကြောင့် admin က account ban ဖြုတ်ပြီး permission ပြန်ပေးထားမှသာ အလုပ်လုပ်မည်။ Startup log ထဲမှာ `Configured single group` နှင့် `Group ready` ကိုပြမည်။
+ Account banned ဖြစ်သော group ကို code က `disabled` လုပ်ပြီး ထပ်မပို့တော့ပါ။ Telegram update handling သည် event-driven ဖြစ်ပြီး spawn တွေ့သည်နှင့် artificial delay မထည့်ဘဲ forward လုပ်သည်။ `render.yaml` ပါသဖြင့် Build Command ကို `pip install -r requirements.txt` နှင့် Start Command ကို `python main.py` ထားနိုင်သည်။ Render Free service တွင် service restart ဖြစ်နိုင်သဖြင့် `SESSION_STRING` ကို persistent local file အဖြစ် မထားဘဲ environment variable အဖြစ် အသုံးပြုထားသည်။
 
 ## လုံခြုံရေးနှင့် Telegram ကန့်သတ်ချက်များ
 

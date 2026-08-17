@@ -1,6 +1,6 @@
 import os
 
-os.environ.setdefault("GROUP_ID", "-1004378413999")
+os.environ.setdefault("GROUP_ID", "-1004403495974")
 os.environ.setdefault("API_ID", "123456")
 os.environ.setdefault("API_HASH", "hash")
 os.environ.setdefault("SESSION_STRING", "session")
@@ -19,7 +19,7 @@ assert NEW_WAIFU_TEXT_RE.search("👒 New Waifu Is Here, Hurry-Up!\nType /guess 
 assert SPAWN_TEXT_RE.search("A new card was spawned")
 assert SPAWN_TEXT_RE.search("SPAWN detected")
 assert not SPAWN_TEXT_RE.search("respawning")
-assert GROUP_ID == -1004378413999
+assert GROUP_ID == -1004403495974
 assert normalize_session_string("  'abc123'  ") == "abc123"
 assert normalize_session_string("SESSION_STRING=abc123") == "abc123"
 try:

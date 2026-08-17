@@ -69,7 +69,7 @@ if API_ID <= 0:
     raise RuntimeError("API_ID must be a positive integer")
 API_HASH = required_env("API_HASH")
 SESSION_STRING = normalize_session_string(required_env("SESSION_STRING"))
-GROUP_ID = env_int("GROUP_ID", -1004378413999)
+GROUP_ID = env_int("GROUP_ID", -1004403495974)
 CATCH_BOT_ID = env_int("CATCH_BOT_ID", 8506436817)
 CATCH_BOT_USERNAME = os.getenv("CATCH_BOT_USERNAME", "").strip().lstrip("@")
 TASK_TEXT = os.getenv("TASK_TEXT", "task လုပ်ပါ")

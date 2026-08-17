@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Deque, Set
 
 from telethon import TelegramClient, events
-from telethon.errors import FloodWaitError, RPCError
+from telethon.errors import FloodWaitError, RPCError, UserBannedInChannelError
 from telethon.sessions import StringSession
 
 from keep_alive import start_keep_alive
@@ -135,6 +135,7 @@ seen_spawn_ids: Deque[tuple[int, int]] = deque(maxlen=1000)
 state_lock: asyncio.Lock | None = None
 task_enabled: asyncio.Event | None = None
 authorized_control_ids: set[int] = set(CONTROL_USER_IDS)
+disabled_groups: set[int] = set()
 
 
 def extract_commands(text: str) -> list[str]:
@@ -163,14 +164,18 @@ async def prune_pending() -> None:
 
 async def send_task_for_group(client: TelegramClient, group_id: int) -> None:
     assert task_enabled is not None
-    while client.is_connected():
+    while client.is_connected() and group_id not in disabled_groups:
         await task_enabled.wait()
         try:
             await client.send_message(group_id, TASK_TEXT)
             logger.info("Sent task message to group %s", group_id)
             await asyncio.sleep(TASK_INTERVAL_SECONDS)
+        except UserBannedInChannelError:
+            disabled_groups.add(group_id)
+            logger.error("Disabled group %s because this account is banned from the supergroup", group_id)
+            break
         except FloodWaitError as exc:
-            wait_seconds = max(1, int(exc.seconds))
+            wait_seconds = max(1, int(exc.seconds)) + 5
             logger.warning("Flood wait for group %s; sleeping %s seconds", group_id, wait_seconds)
             await asyncio.sleep(wait_seconds)
         except RPCError:
@@ -195,7 +200,7 @@ async def task_sender(client: TelegramClient) -> None:
 
 async def handle_spawn(client: TelegramClient, message, group_id: int) -> None:
     text = message.raw_text or ""
-    if SPAWN_MARKER not in text.casefold():
+    if group_id in disabled_groups or SPAWN_MARKER not in text.casefold():
         return
     assert state_lock is not None
 
@@ -237,11 +242,17 @@ async def handle_spawn(client: TelegramClient, message, group_id: int) -> None:
 
 
 async def relay_command(client: TelegramClient, group_id: int, command: str) -> None:
+    if group_id in disabled_groups:
+        return
     try:
         await client.send_message(group_id, command)
         logger.info("Relayed bot command to group %s: %s", group_id, command)
+    except UserBannedInChannelError:
+        disabled_groups.add(group_id)
+        logger.error("Disabled group %s because this account is banned from the supergroup", group_id)
     except FloodWaitError as exc:
-        logger.warning("Flood wait while relaying to group %s: %s seconds", group_id, exc.seconds)
+        wait_seconds = max(1, int(exc.seconds)) + 5
+        logger.warning("Flood wait while relaying to group %s: %s seconds", group_id, wait_seconds)
     except RPCError:
         logger.exception("Telegram RPC error while relaying to group %s", group_id)
     except Exception:
@@ -259,7 +270,15 @@ def reply_to_message_id(message) -> int | None:
 async def handle_bot_reply(client: TelegramClient, message) -> None:
     raw_text = message.raw_text or ""
     commands = extract_commands(raw_text)
-    logger.info("Bot reply received from %s; commands_detected=%s", message.sender_id, len(commands))
+    reply_to_id = reply_to_message_id(message)
+    logger.info(
+        "Bot reply received from %s chat=%s reply_to=%s commands_detected=%s text_preview=%r",
+        message.sender_id,
+        getattr(message, "chat_id", None),
+        reply_to_id,
+        len(commands),
+        raw_text[:160],
+    )
     if not commands:
         return
     assert state_lock is not None
@@ -268,7 +287,6 @@ async def handle_bot_reply(client: TelegramClient, message) -> None:
     new_commands: list[str] = []
     async with state_lock:
         pending: PendingSpawn | None = None
-        reply_to_id = reply_to_message_id(message)
         if reply_to_id is not None:
             pending = next(
                 (item for item in pending_spawns if item.forwarded_message_id == reply_to_id),
@@ -377,6 +395,12 @@ async def run() -> None:
         authorized_control_ids = {me.id}
     logger.info("Logged in as %s (id=%s)", getattr(me, "username", None), me.id)
     logger.info("Configured group count=%s groups=%s", len(GROUP_IDS), GROUP_IDS)
+    if len(GROUP_IDS) >= 5 and TASK_INTERVAL_SECONDS < 12:
+        logger.warning(
+            "TASK_INTERVAL_SECONDS=%s across %s groups may trigger Telegram flood waits; 12+ seconds is safer",
+            TASK_INTERVAL_SECONDS,
+            len(GROUP_IDS),
+        )
     if len(GROUP_IDS) < 5:
         logger.warning(
             "Only %s group IDs configured; add GROUP_IDS or GROUP_ID_1..GROUP_ID_5 for five groups",

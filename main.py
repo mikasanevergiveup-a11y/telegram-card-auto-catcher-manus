@@ -52,41 +52,6 @@ def normalize_session_string(value: str) -> str:
     return value
 
 
-def parse_id_list(value: str, fallback: str) -> tuple[int, ...]:
-    raw_value = value.strip() or fallback.strip()
-    result: list[int] = []
-    for raw in raw_value.split(","):
-        raw = raw.strip()
-        if not raw:
-            continue
-        try:
-            group_id = int(raw)
-        except ValueError as exc:
-            raise RuntimeError("GROUP_IDS must be comma-separated numeric Telegram IDs") from exc
-        if group_id not in result:
-            result.append(group_id)
-    if not result:
-        raise RuntimeError("At least one Telegram group ID is required in GROUP_IDS")
-    return tuple(result)
-
-
-def load_group_ids() -> tuple[int, ...]:
-    """Load comma-separated GROUP_IDS and optional GROUP_ID_1..GROUP_ID_20 values.
-
-    This supports both a single Render variable and separate variables, which
-    makes it easier to see and edit five or more groups in the dashboard.
-    """
-    values: list[str] = []
-    combined = os.getenv("GROUP_IDS", "").strip()
-    if combined:
-        values.append(combined)
-    for index in range(1, 21):
-        value = os.getenv(f"GROUP_ID_{index}", "").strip()
-        if value:
-            values.append(value)
-    return parse_id_list(",".join(values), os.getenv("GROUP_ID", "-1004378413999"))
-
-
 def parse_id_set(value: str) -> set[int]:
     result: set[int] = set()
     for raw in value.split(","):
@@ -104,7 +69,7 @@ if API_ID <= 0:
     raise RuntimeError("API_ID must be a positive integer")
 API_HASH = required_env("API_HASH")
 SESSION_STRING = normalize_session_string(required_env("SESSION_STRING"))
-GROUP_IDS = load_group_ids()
+GROUP_ID = env_int("GROUP_ID", -1004378413999)
 CATCH_BOT_ID = env_int("CATCH_BOT_ID", 8506436817)
 TASK_TEXT = os.getenv("TASK_TEXT", "task လုပ်ပါ")
 TASK_INTERVAL_SECONDS = max(4, env_int("TASK_INTERVAL_SECONDS", 4))
@@ -189,13 +154,7 @@ async def send_task_for_group(client: TelegramClient, group_id: int) -> None:
 
 
 async def task_sender(client: TelegramClient) -> None:
-    tasks = [asyncio.create_task(send_task_for_group(client, group_id)) for group_id in GROUP_IDS]
-    try:
-        await asyncio.gather(*tasks)
-    finally:
-        for task in tasks:
-            task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
+    await send_task_for_group(client, GROUP_ID)
 
 
 async def handle_spawn(client: TelegramClient, message, group_id: int) -> None:
@@ -310,20 +269,9 @@ async def handle_bot_reply(client: TelegramClient, message) -> None:
             pending_spawns.remove(pending)
 
     if new_commands:
-        # Broadcast every bot command to every configured card group in
-        # parallel. There is no artificial sleep between groups.
-        deliveries = [
-            relay_command(client, group_id, command)
-            for group_id in GROUP_IDS
-            for command in new_commands
-        ]
-        await asyncio.gather(*deliveries)
-        logger.info(
-            "Broadcast commands=%s to group_count=%s groups=%s",
-            len(new_commands),
-            len(GROUP_IDS),
-            GROUP_IDS,
-        )
+        # Relay commands to the single configured group without an artificial delay.
+        await asyncio.gather(*(relay_command(client, GROUP_ID, command) for command in new_commands))
+        logger.info("Relayed commands=%s to group=%s", len(new_commands), GROUP_ID)
 
 
 async def handle_control_command(client: TelegramClient, message) -> bool:
@@ -351,7 +299,7 @@ async def handle_control_command(client: TelegramClient, message) -> bool:
 
 async def handle_group_message(client: TelegramClient, event) -> None:
     group_id = event.chat_id
-    if group_id not in GROUP_IDS:
+    if group_id != GROUP_ID:
         return
     if await handle_control_command(client, event.message):
         return
@@ -394,36 +342,12 @@ async def run() -> None:
     if not authorized_control_ids:
         authorized_control_ids = {me.id}
     logger.info("Logged in as %s (id=%s)", getattr(me, "username", None), me.id)
-    logger.info("Configured group count=%s groups=%s", len(GROUP_IDS), GROUP_IDS)
-    if len(GROUP_IDS) >= 5 and TASK_INTERVAL_SECONDS < 12:
-        logger.warning(
-            "TASK_INTERVAL_SECONDS=%s across %s groups may trigger Telegram flood waits; 12+ seconds is safer",
-            TASK_INTERVAL_SECONDS,
-            len(GROUP_IDS),
-        )
-    if len(GROUP_IDS) < 5:
-        logger.warning(
-            "Only %s group IDs configured; add GROUP_IDS or GROUP_ID_1..GROUP_ID_5 for five groups",
-            len(GROUP_IDS),
-        )
-
-    async def resolve_group(group_id: int) -> tuple[int, bool, str]:
-        try:
-            entity = await client.get_entity(group_id)
-            title = getattr(entity, "title", "resolved")
-            return group_id, True, str(title)
-        except Exception as exc:
-            return group_id, False, type(exc).__name__
-
-    resolved_groups = await asyncio.gather(*(resolve_group(group_id) for group_id in GROUP_IDS))
-    unavailable = [item for item in resolved_groups if not item[1]]
-    for group_id, ok, detail in resolved_groups:
-        if ok:
-            logger.info("Group ready id=%s title=%s", group_id, detail)
-        else:
-            logger.error("Group unavailable id=%s error=%s", group_id, detail)
-    if unavailable:
-        logger.warning("%s configured group(s) could not be resolved; check membership and IDs", len(unavailable))
+    logger.info("Configured single group=%s", GROUP_ID)
+    try:
+        entity = await client.get_entity(GROUP_ID)
+        logger.info("Group ready id=%s title=%s", GROUP_ID, getattr(entity, "title", "resolved"))
+    except Exception as exc:
+        logger.error("Group unavailable id=%s error=%s", GROUP_ID, type(exc).__name__)
 
     logger.info("Authorized control user IDs: %s", sorted(authorized_control_ids))
 
@@ -433,7 +357,7 @@ async def run() -> None:
     async def bot_event_handler(event) -> None:
         await handle_bot_reply(client, event.message)
 
-    client.add_event_handler(group_event_handler, events.NewMessage(chats=list(GROUP_IDS)))
+    client.add_event_handler(group_event_handler, events.NewMessage(chats=GROUP_ID))
     client.add_event_handler(bot_event_handler, events.NewMessage(from_users=CATCH_BOT_ID))
 
     sender_task = asyncio.create_task(task_sender(client))

@@ -8,8 +8,7 @@
 
 | Setting | Value |
 |---|---:|
-| Group IDs | Render `GROUP_IDS` မှ comma-separated IDs; အနည်းဆုံး ၅ ခု support |
-| Fallback group ID | `-1004378413999` |
+| Group ID | Render `GROUP_ID` မှာ `-1004378413999` |
 | Catcher bot ID | `8506436817` |
 | Task interval | `4` seconds |
 | Task text | `task လုပ်ပါ` |
@@ -17,16 +16,16 @@
 
 ## လုပ်ဆောင်ပုံ
 
-1. Telegram user account သည် `GROUP_IDS` ထဲက group တစ်ခုချင်းစီသို့ `task လုပ်ပါ` ကို ၄ စက္ကန့်တစ်ခါ ပို့သည်။
+1. Telegram user account သည် `GROUP_ID` ထဲက group တစ်ခုတည်းသို့ `task လုပ်ပါ` ကို သတ်မှတ်ထားသော interval ဖြင့် ပို့သည်။
 2. Card group တစ်ခုတွင် `👒 New Waifu Is Here, Hurry-Up!` နှင့် `/guess <name>` ပါသော spawn post ပေါ်လာပါက အဲဒီ post ကို spawn ဟု သတ်မှတ်သည်။
-3. Spawn post ကို delay မထည့်ဘဲ `8506436817` သို့ ချက်ချင်း forward လုပ်သည်။ Group များစွာ၏ updates ကို တစ်ပြိုင်နက် လက်ခံနိုင်အောင် concurrent event handling သုံးထားသည်။
-4. Catcher bot ထံမှ `/guess (charactername)` သို့မဟုတ် `/sudo (character name)` ရလာလျှင် မူရင်း group တစ်ခုတည်းမဟုတ်ဘဲ `GROUP_IDS`/`GROUP_ID_1..5` ထဲက group အားလုံးသို့ တစ်ပြိုင်နက် broadcast လုပ်သည်။ `Answer: /guess Sakura`, emoji/Markdown ပါသော reply နှင့် command တစ်ကြောင်းချင်း reply များကိုလည်း parser က ဖမ်းနိုင်သည်။
+3. Spawn post ကို delay မထည့်ဘဲ `8506436817` သို့ ချက်ချင်း forward လုပ်သည်။
+4. Catcher bot ထံမှ `/guess (charactername)` သို့မဟုတ် `/sudo (character name)` ရလာလျှင် အဲဒီ single group ထဲသို့ ပြန်ပို့သည်။ `Answer: /guess Sakura`, emoji/Markdown ပါသော reply နှင့် command တစ်ကြောင်းချင်း reply များကိုလည်း parser က ဖမ်းနိုင်သည်။
 5. တစ်ခုတည်းသော spawn post ကို process restart မဖြစ်မချင်း ထပ်မပို့ရန် memory ထဲတွင် deduplicate လုပ်ထားသည်။
 6. Group ထဲမှ ခွင့်ပြုထားသော user သည် `/stop` ပို့လျှင် task message loop ကို ရပ်ပြီး `/start` ပို့လျှင် ပြန်စသည်။ Spawn forwarding နှင့် bot result listener က ဆက်လက်အလုပ်လုပ်နေမည်။
 
 ## `/start` နှင့် `/stop`
 
-Service စတင်ချိန်တွင် card group အားလုံး၏ task loop များသည် အလိုအလျောက် start ဖြစ်သည်။ Group တစ်ခုထဲတွင် `/stop` ပို့လျှင် task loops အားလုံး ရပ်မည်။ `/start` ပို့လျှင် ပြန်စမည်။ Spawn result broadcast ကတော့ bot result ရရှိလျှင် group အားလုံးသို့ ဆက်ပို့မည်။ Control command ကို မူလ Telegram account ကိုယ်တိုင်က ပို့လျှင် အလိုအလျောက်ခွင့်ပြုထားသည်။ အခြား Telegram user များကို ခွင့်ပြုလိုပါက `CONTROL_USER_IDS` တွင် comma-separated numeric IDs ထည့်ပါ။
+Service စတင်ချိန်တွင် single-group task loop သည် အလိုအလျောက် start ဖြစ်သည်။ `/stop` ပို့လျှင် task loop ရပ်မည်။ `/start` ပို့လျှင် ပြန်စမည်။ Control command ကို မူလ Telegram account ကိုယ်တိုင်က ပို့လျှင် အလိုအလျောက်ခွင့်ပြုထားသည်။ အခြား Telegram user များကို ခွင့်ပြုလိုပါက `CONTROL_USER_IDS` တွင် comma-separated numeric IDs ထည့်ပါ။
 
 `keep_alive.py` သည် ပေးထားသော shared file ကို project အတွက် ပြန်ညှိထားသော version ဖြစ်ပြီး `/`, `/health`, `/healthz` health routes နှင့် အနည်းဆုံး ၆၀ စက္ကန့် interval ရှိသော self-ping loop ပါသည်။ Self-ping သည် liveness aid သာဖြစ်ပြီး Render Free spin-down သို့မဟုတ် restart ကို အာမခံတားဆီးပေးမည် မဟုတ်ပါ။
 
@@ -66,12 +65,10 @@ Script က phone number, Telegram login code နှင့် two-step verificati
 | `API_ID` | `my.telegram.org` မှ numeric API ID |
 | `API_HASH` | `my.telegram.org` မှ API hash |
 | `SESSION_STRING` | local script က ထုတ်ပေးသော အရှည်ကြီးသော Telethon string ကိုသာ ထည့်ပါ။ `replace-me` မထည့်ပါနှင့် |
-| `GROUP_IDS` | Optional comma-separated IDs; ဥပမာ `-1004378413999,-1001111111111,-1002222222222,-1003333333333,-1004444444444` |
-| `GROUP_ID_1` ... `GROUP_ID_5` | Optional; group တစ်ခုချင်းစီကို သီးခြား Render field ထဲထည့်နိုင်သည် |
-| `GROUP_ID` | Optional fallback; `GROUP_IDS` နှင့် `GROUP_ID_1..5` မရှိမှသာ `-1004378413999` ကိုသုံးမည် |
+| `GROUP_ID` | `-1004378413999` သို့မဟုတ် သင်အသုံးပြုမည့် single group ID |
 | `CATCH_BOT_ID` | `8506436817` |
 | `TASK_TEXT` | `task လုပ်ပါ` |
-| `TASK_INTERVAL_SECONDS` | `4` per group; code က ၄ စက္ကန့်အောက်ကို ၄ သို့ညှိမည် |
+| `TASK_INTERVAL_SECONDS` | `4` ထားနိုင်သော်လည်း flood-wait ဖြစ်ပါက `12` သို့မြှင့်ပါ |
 | `SPAWN_MARKER` | `New Waifu Is Here` |
 | `BOT_REPLY_TIMEOUT_SECONDS` | `25` |
 | `CONTROL_USER_IDS` | Optional; ဥပမာ `123456789,987654321` |
@@ -81,9 +78,7 @@ Script က phone number, Telegram login code နှင့် two-step verificati
 | `SELF_PING_TIMEOUT` | `10` seconds |
 | `PORT` | Render က အလိုအလျောက်ထည့်ပေးလျှင် မပြောင်းပါနှင့် |
 
-`GROUP_IDS` ထဲမှာ comma ခွဲထည့်နိုင်သလို `GROUP_ID_1` မှ `GROUP_ID_5` အထိ သီးခြား field များလည်း သုံးနိုင်သည်။ Code က နှစ်မျိုးလုံးကို စုစည်းပြီး duplicate ID များကို ဖယ်ရှားမည်။ Account က group ၅ ခုလုံးမှာ member ဖြစ်ပြီး message ပို့/forward ခွင့်ရှိရပါမယ်။ Startup log ထဲမှာ `Configured group count`, `Group ready` နှင့် `Group unavailable` ကိုပြမည်။ သုံးခုသာ run နေလျှင် ကျန် ID များ မမှန်ခြင်း၊ account မဝင်ထားခြင်း သို့မဟုတ် permission မရှိခြင်းကို အဲဒီ log မှာ စစ်နိုင်သည်။
-
-Telegram update handling သည် fixed polling sleep မဟုတ်ဘဲ event-driven ဖြစ်သည်။ ထို့ကြောင့် spawn တွေ့သည်နှင့် artificial delay မထည့်ဘဲ forward လုပ်ပြီး bot result ကိုလည်း concurrent handler ဖြင့် ပြန်ပို့သည်။ Telegram flood-wait သို့မဟုတ် platform rate limit ကိုတော့ ကျော်လွှားရန် မကြိုးစားပါ။ Group ၅ ခုလုံးကို ၄ စက္ကန့်တစ်ခါ message ပို့ခြင်းသည် တစ်မိနစ်လျှင် စုစုပေါင်း message များပြားနိုင်သောကြောင့် `TASK_INTERVAL_SECONDS=12` သို့မဟုတ် ထိုထက်မြင့်ထားခြင်းက ပိုလုံခြုံသည်။ Account banned ဖြစ်သော group ကို code က `disabled` လုပ်ပြီး ထပ်မပို့တော့ပါ။ `render.yaml` ပါသဖြင့် Build Command ကို `pip install -r requirements.txt` နှင့် Start Command ကို `python main.py` ထားနိုင်သည်။ Render Free service တွင် service restart ဖြစ်နိုင်သဖြင့် `SESSION_STRING` ကို persistent local file အဖြစ် မထားဘဲ environment variable အဖြစ် အသုံးပြုထားသည်။
+Account က single group ထဲမှာ member ဖြစ်ပြီး message ပို့/forward ခွင့်ရှိရပါမယ်။ Startup log ထဲမှာ `Configured single group` နှင့် `Group ready` ကိုပြမည်။ Account banned ဖြစ်သော group ကို code က `disabled` လုပ်ပြီး ထပ်မပို့တော့ပါ။ Telegram update handling သည် event-driven ဖြစ်ပြီး spawn တွေ့သည်နှင့် artificial delay မထည့်ဘဲ forward လုပ်သည်။ `render.yaml` ပါသဖြင့် Build Command ကို `pip install -r requirements.txt` နှင့် Start Command ကို `python main.py` ထားနိုင်သည်။ Render Free service တွင် service restart ဖြစ်နိုင်သဖြင့် `SESSION_STRING` ကို persistent local file အဖြစ် မထားဘဲ environment variable အဖြစ် အသုံးပြုထားသည်။
 
 ## လုံခြုံရေးနှင့် Telegram ကန့်သတ်ချက်များ
 

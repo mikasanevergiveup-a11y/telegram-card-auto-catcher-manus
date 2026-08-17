@@ -16,6 +16,8 @@ services:
         value: "-1004378413999"
       - key: CATCH_BOT_ID
         value: "8506436817"
+      - key: CATCH_BOT_USERNAME
+        sync: false
       - key: TASK_TEXT
         value: "task လုပ်ပါ"
       - key: TASK_INTERVAL_SECONDS

@@ -71,6 +71,7 @@ API_HASH = required_env("API_HASH")
 SESSION_STRING = normalize_session_string(required_env("SESSION_STRING"))
 GROUP_ID = env_int("GROUP_ID", -1004378413999)
 CATCH_BOT_ID = env_int("CATCH_BOT_ID", 8506436817)
+CATCH_BOT_USERNAME = os.getenv("CATCH_BOT_USERNAME", "").strip().lstrip("@")
 TASK_TEXT = os.getenv("TASK_TEXT", "task လုပ်ပါ")
 TASK_INTERVAL_SECONDS = max(4, env_int("TASK_INTERVAL_SECONDS", 4))
 SPAWN_MARKER = os.getenv("SPAWN_MARKER", "New Waifu Is Here").casefold()
@@ -101,6 +102,7 @@ state_lock: asyncio.Lock | None = None
 task_enabled: asyncio.Event | None = None
 authorized_control_ids: set[int] = set(CONTROL_USER_IDS)
 disabled_groups: set[int] = set()
+catch_bot_entity = None
 
 
 def extract_commands(text: str) -> list[str]:
@@ -172,8 +174,11 @@ async def handle_spawn(client: TelegramClient, message, group_id: int) -> None:
         pending_spawns.append(pending)
 
     try:
-        # Forward immediately; no artificial delay is added here.
-        forwarded = await client.forward_messages(CATCH_BOT_ID, message)
+        # Forward immediately; no artificial delay is added here. Use the
+        # resolved peer rather than repeatedly passing a raw numeric ID.
+        if catch_bot_entity is None:
+            raise RuntimeError("Catcher bot peer is not resolved")
+        forwarded = await client.forward_messages(catch_bot_entity, message)
         if isinstance(forwarded, list):
             forwarded = forwarded[0] if forwarded else None
         pending.forwarded_message_id = getattr(forwarded, "id", None)
@@ -341,6 +346,22 @@ async def run() -> None:
     me = await client.get_me()
     if not authorized_control_ids:
         authorized_control_ids = {me.id}
+    global catch_bot_entity
+    bot_lookup = CATCH_BOT_USERNAME or CATCH_BOT_ID
+    try:
+        catch_bot_entity = await client.get_entity(bot_lookup)
+        logger.info(
+            "Catcher bot ready id=%s username=%s lookup=%s",
+            getattr(catch_bot_entity, "id", None),
+            getattr(catch_bot_entity, "username", None),
+            bot_lookup,
+        )
+    except Exception as exc:
+        await client.disconnect()
+        raise RuntimeError(
+            f"Could not resolve catcher bot {bot_lookup!r}. Set CATCH_BOT_USERNAME if the numeric ID cannot be resolved."
+        ) from exc
+
     logger.info("Logged in as %s (id=%s)", getattr(me, "username", None), me.id)
     logger.info("Configured single group=%s", GROUP_ID)
     try:
@@ -358,7 +379,7 @@ async def run() -> None:
         await handle_bot_reply(client, event.message)
 
     client.add_event_handler(group_event_handler, events.NewMessage(chats=GROUP_ID))
-    client.add_event_handler(bot_event_handler, events.NewMessage(from_users=CATCH_BOT_ID))
+    client.add_event_handler(bot_event_handler, events.NewMessage(from_users=catch_bot_entity))
 
     sender_task = asyncio.create_task(task_sender(client))
     try:

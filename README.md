@@ -18,7 +18,7 @@
 
 1. Telegram user account သည် `GROUP_ID` ထဲက group တစ်ခုတည်းသို့ `task လုပ်ပါ` ကို သတ်မှတ်ထားသော interval ဖြင့် ပို့သည်။
 2. Card group တစ်ခုတွင် `👒 New Waifu Is Here, Hurry-Up!` နှင့် `/guess <name>` ပါသော spawn post ပေါ်လာပါက အဲဒီ post ကို spawn ဟု သတ်မှတ်သည်။
-3. Spawn post ကို delay မထည့်ဘဲ `8506436817` သို့ ချက်ချင်း forward လုပ်သည်။
+3. Spawn post ကို delay မထည့်ဘဲ `8506436817` သို့ ချက်ချင်း forward လုပ်သည်။ `CATCH_BOT_USERNAME` ထည့်ထားပါက bot peer ကို username ဖြင့် resolve လုပ်ပြီး forward လုပ်သည်။ Log ထဲမှာ `Catcher bot ready` နှင့် `Forwarded spawn ... bot_message=...` ပြရမည်။
 4. Catcher bot ထံမှ `/guess (charactername)` သို့မဟုတ် `/sudo (character name)` ရလာလျှင် အဲဒီ single group ထဲသို့ ပြန်ပို့သည်။ `Answer: /guess Sakura`, emoji/Markdown ပါသော reply နှင့် command တစ်ကြောင်းချင်း reply များကိုလည်း parser က ဖမ်းနိုင်သည်။
 5. တစ်ခုတည်းသော spawn post ကို process restart မဖြစ်မချင်း ထပ်မပို့ရန် memory ထဲတွင် deduplicate လုပ်ထားသည်။
 6. Group ထဲမှ ခွင့်ပြုထားသော user သည် `/stop` ပို့လျှင် task message loop ကို ရပ်ပြီး `/start` ပို့လျှင် ပြန်စသည်။ Spawn forwarding နှင့် bot result listener က ဆက်လက်အလုပ်လုပ်နေမည်။
@@ -67,6 +67,7 @@ Script က phone number, Telegram login code နှင့် two-step verificati
 | `SESSION_STRING` | local script က ထုတ်ပေးသော အရှည်ကြီးသော Telethon string ကိုသာ ထည့်ပါ။ `replace-me` မထည့်ပါနှင့် |
 | `GROUP_ID` | `-1004378413999` သို့မဟုတ် သင်အသုံးပြုမည့် single group ID |
 | `CATCH_BOT_ID` | `8506436817` |
+| `CATCH_BOT_USERNAME` | Optional; bot username ရှိပါက `@` မပါဘဲ ထည့်ပါ |
 | `TASK_TEXT` | `task လုပ်ပါ` |
 | `TASK_INTERVAL_SECONDS` | `4` ထားနိုင်သော်လည်း flood-wait ဖြစ်ပါက `12` သို့မြှင့်ပါ |
 | `SPAWN_MARKER` | `New Waifu Is Here` |

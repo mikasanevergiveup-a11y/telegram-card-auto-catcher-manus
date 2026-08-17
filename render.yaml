@@ -12,6 +12,8 @@ services:
         sync: false
       - key: SESSION_STRING
         sync: false
+      - key: GROUP_IDS
+        sync: false
       - key: GROUP_ID
         value: "-1004378413999"
       - key: CATCH_BOT_ID

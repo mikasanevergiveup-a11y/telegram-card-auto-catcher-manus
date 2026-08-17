@@ -75,13 +75,14 @@ CATCH_BOT_USERNAME = os.getenv("CATCH_BOT_USERNAME", "").strip().lstrip("@")
 TASK_TEXT = os.getenv("TASK_TEXT", "task လုပ်ပါ")
 TASK_INTERVAL_SECONDS = max(4, env_int("TASK_INTERVAL_SECONDS", 4))
 SPAWN_MARKER = os.getenv("SPAWN_MARKER", "New Waifu Is Here").casefold()
+SPAWN_TEXT_RE = re.compile(r"\bspawn(?:ed)?\b", re.IGNORECASE)
 BOT_REPLY_TIMEOUT_SECONDS = max(10, env_int("BOT_REPLY_TIMEOUT_SECONDS", 25))
 CONTROL_USER_IDS = parse_id_set(os.getenv("CONTROL_USER_IDS", ""))
 
 # Match commands anywhere in a bot reply, including after labels such as
 # "Answer:", emoji, bullets, or Markdown formatting.
 COMMAND_RE = re.compile(
-    r"(?<![A-Za-z0-9_])(/(?:guess|sudo)(?:@[A-Za-z0-9_]+)?[ \t]+[^\r\n`]+)",
+    r"(?<![A-Za-z0-9_])(/(?:catch|guess|sudo)(?:@[A-Za-z0-9_]+)?[ \t]+[^\r\n`]+)",
     re.IGNORECASE,
 )
 CONTROL_RE = re.compile(r"^\s*/(start|stop)(?:@[A-Za-z0-9_]+)?\s*$", re.IGNORECASE)
@@ -161,7 +162,7 @@ async def task_sender(client: TelegramClient) -> None:
 
 async def handle_spawn(client: TelegramClient, message, group_id: int) -> None:
     text = message.raw_text or ""
-    if group_id in disabled_groups or SPAWN_MARKER not in text.casefold():
+    if group_id in disabled_groups or not SPAWN_TEXT_RE.search(text):
         return
     assert state_lock is not None
 
@@ -268,9 +269,10 @@ async def handle_bot_reply(client: TelegramClient, message) -> None:
         new_commands = [command for command in commands if command.casefold() not in sent_lower]
         pending.sent_commands.update(new_commands)
         command_names = {item.split()[0].split("@")[0].casefold() for item in pending.sent_commands}
-        # The /guess result completes this spawn for the requested workflow.
-        # If /sudo is included in the same reply, it is broadcast as well.
-        if "/guess" in command_names or {"/guess", "/sudo"}.issubset(command_names):
+        # Keep the pending item until the catcher has returned the useful
+        # command sequence; this allows /catch, /guess, and /sudo to arrive
+        # as separate bot messages without losing later commands.
+        if "/sudo" in command_names and ({"/guess", "/catch"} & command_names):
             pending_spawns.remove(pending)
 
     if new_commands:

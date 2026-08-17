@@ -76,6 +76,10 @@ TASK_TEXT = os.getenv("TASK_TEXT", "task လုပ်ပါ")
 TASK_INTERVAL_SECONDS = max(4, env_int("TASK_INTERVAL_SECONDS", 4))
 SPAWN_MARKER = os.getenv("SPAWN_MARKER", "New Waifu Is Here").casefold()
 SPAWN_TEXT_RE = re.compile(r"\bspawn(?:ed)?\b", re.IGNORECASE)
+NEW_WAIFU_TEXT_RE = re.compile(
+    r"new\s+waifu\s+is\s+here.*?type\s+/guess\s+<name>\s+to\s+add\s+her\s+into\s+your\s+harem",
+    re.IGNORECASE | re.DOTALL,
+)
 BOT_REPLY_TIMEOUT_SECONDS = max(10, env_int("BOT_REPLY_TIMEOUT_SECONDS", 25))
 CONTROL_USER_IDS = parse_id_set(os.getenv("CONTROL_USER_IDS", ""))
 
@@ -162,7 +166,8 @@ async def task_sender(client: TelegramClient) -> None:
 
 async def handle_spawn(client: TelegramClient, message, group_id: int) -> None:
     text = message.raw_text or ""
-    if group_id in disabled_groups or not SPAWN_TEXT_RE.search(text):
+    is_spawn_post = SPAWN_TEXT_RE.search(text) or NEW_WAIFU_TEXT_RE.search(text)
+    if group_id in disabled_groups or not is_spawn_post:
         return
     assert state_lock is not None
 

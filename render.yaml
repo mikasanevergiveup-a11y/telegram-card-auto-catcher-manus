@@ -13,7 +13,7 @@ services:
       - key: SESSION_STRING
         sync: false
       - key: GROUP_ID
-        value: "-1004403495974"
+        value: "-1003980029688"
       - key: CATCH_BOT_ID
         value: "8506436817"
       - key: CATCH_BOT_USERNAME
